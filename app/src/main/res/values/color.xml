@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background_czat">#FFE6E6FA</color>
+    <color name="background_nowa_wiadomosc">#FFFFFFFF</color>
+    <color name="background_wiadomosc_od_uzytkownika">#FF000080</color>
+    <color name="background_wiadomosc_do_uzytkownika">#FF98FB98</color>
+    <color name="background">#FFE0FFFF</color>
+    <color name="text_Blowfish_Chat">#FF0000FF</color>
+</resources>

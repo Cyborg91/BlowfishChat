@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools" tools:context=".Czat">
+    <item android:id="@+id/action_ustawienia" android:title="@string/action_ustawienia"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_czat_wyczysc" android:title="@string/action_czat_wyczysc"
+        android:orderInCategory="200" app:showAsAction="never" />
+
+
+</menu>

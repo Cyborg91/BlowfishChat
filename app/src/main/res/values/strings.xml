@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">BlowfishChat</string>
+    <string name="blowfish_text_text_view">Blowfish Chat</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_chat">ChatActivity</string>
+
+    <string name="czat_nowa_wiadomosc_tekst_hint">New message</string>
+    <string name="czat_nowa_wiadomosc_wyslij_text">Send</string>
+    <string name="action_ustawienia">Settings</string>
+    <string name="action_bluetooth">Bluetooth</string>
+    <string name="action_czat_wyczysc">Clear chat</string>
+</resources>
