@@ -5,20 +5,24 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Toast;
 import android.widget.TwoLineListItem;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ContactActivity extends Activity {
+public class ContactActivity extends Activity implements TcpManagerObserver {
     private ListView contactListView;
+    private Button getContactsButton;
 
     public List<Contact> getContacts() {
         return TCPManager.getInstance().getClientsList();
@@ -59,10 +63,58 @@ public class ContactActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+
+        StrictMode.setThreadPolicy(policy);
+        TCPManager.getInstance().register(this);
         setContentView(R.layout.activity_contact);
+
+        getContactsButton = (Button) findViewById(R.id.getClientsButton);
+        getContactsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TCPManager.getInstance().getClients();
+            }
+        });
 
         contactListView = (ListView) findViewById(R.id.contactListView);
         setupContacts();
+    }
+    public void badToken() {
+        Intent intent = new Intent(ContactActivity.this, LoginActivity.class);
+        startActivity(intent);
+    }
+
+    public void loginOk() {
+    }
+
+    public void registerOk() {
+    }
+    public void registerNook() {
+    }
+
+    public void loginNook() {
+    }
+
+    public void clientsDownloaded() {
+        ContactActivity.this.runOnUiThread(new Runnable() {
+            public void run() {
+                setupContacts();
+            }
+        });
+    }
+
+    public void sendOk() {
+
+    }
+
+    public void msgReceived(final String fromUser, final String message) {
+        ContactActivity.this.runOnUiThread(new Runnable() {
+            public void run() {
+                Toast.makeText(getApplicationContext(), "Receiver message from" + fromUser + "!", Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }
 

@@ -12,5 +12,5 @@ public interface TcpManagerObserver {
     void loginNook();
     void clientsDownloaded();
     void sendOk();
-    void msgReceived(String fromUser);
+    void msgReceived(String fromUser, String message);
 }

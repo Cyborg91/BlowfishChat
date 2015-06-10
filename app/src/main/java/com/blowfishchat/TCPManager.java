@@ -19,11 +19,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TCPManager {
 
-    public final static String SERVER_IP = "";//TODO
+    public final static String SERVER_IP = "46.101.158.227";//TODO
     public final static Integer SERVER_PORT = 8000;
 
-    public final static String LOGGER_IP = "";//TODO
-    public final static Integer LOGGER_PORT = 8000;
+    public final static String LOGGER_IP = "46.101.158.227";//TODO
+    public final static Integer LOGGER_PORT = 9000;
 
     private BufferedReader in;
     private BufferedReader loggerIn;
@@ -120,9 +120,22 @@ public class TCPManager {
         BlowfishEncrypter encrypter = new BlowfishEncrypter();
         encrypter.init(true, key.getBytes());
         byte[] msgBytes = message.getBytes();
+
+        int newMsgBytesArraySize = message.getBytes().length + message.getBytes().length%8 == 0 ? 0 : 8 - message.getBytes().length%8;
+
+        byte[] newMsgBytesArray = new byte[newMsgBytesArraySize];
+
+        for (int i = 0; i < msgBytes.length; i++) {
+            newMsgBytesArray[i] = msgBytes[i];
+        }
+
+        for (int j = msgBytes.length; j < newMsgBytesArray.length; j ++) {
+            newMsgBytesArray[j] = 0x00;
+        }
+
         int offset = message.getBytes().length%8 == 0 ? 0 : 8 - message.getBytes().length%8;
         byte[] encryptedBytes = new byte[message.getBytes().length + offset];
-        encrypter.transformBlock(msgBytes, 0, encryptedBytes, 0);
+        encrypter.transformBlock(newMsgBytesArray, 0, encryptedBytes, 0);
         String encryptedBase64 = Base64.encodeToString(encryptedBytes, Base64.DEFAULT);
         sendToServer("SEND;" + login + ";" + token + ";" + receiver + ";" + encryptedBase64);
     }
@@ -195,68 +208,81 @@ public class TCPManager {
                 while (doWork) {
                     try {
                         String line = in.readLine();
-                        String[] msgParts = line.split(";");
+                        if (line != null) {
+                            System.out.println("Received message: " + line);
+                            String[] msgParts = line.split(";");
 
-                        switch (msgParts[0]) {
+                            switch (msgParts[0]) {
 
-                            case "CLIENTS":
-                                for (int i = 1; i < msgParts.length; i ++) {
+                                case "CLIENTS":
+                                    for (int i = 1; i < msgParts.length; i ++) {
+                                        boolean userExists = false;
+                                        for (Contact c : clientsList) {
+                                            if (c.getName().equals(msgParts[i])) {
+                                                userExists = true;
+                                            }
+                                        }
+                                        if (!userExists) {
+                                            clientsList.add(new Contact(msgParts[i]));
+                                        }
+                                    }
+                                    for (TcpManagerObserver o : observers) {
+                                        o.clientsDownloaded();
+                                    }
+                                    break;
+                                case "REG_OK":
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.registerOk();
+                                    }
+                                    break;
+                                case "REG_NOOK":
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.registerNook();
+                                    }
+                                    break;
+                                case "LOGIN_NOOK":
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.loginNook();
+                                    }
+                                    break;
+                                case "LOGIN_OK":
+                                    for (TcpManagerObserver observer : observers) {
+                                        token = msgParts[1];
+                                        observer.loginOk();
+                                    }
+                                    break;
+                                case "BAD_TOKEN":
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.badToken();
+                                    }
+                                    break;
+                                case "SEND_OK":
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.sendOk();
+                                    }
+                                    break;
+                                case "MSG":
+                                    String senderName = msgParts[1];
+                                    String encryptedMessage = msgParts[2];
                                     boolean userExists = false;
-                                    for (Contact c : clientsList) {
-                                        if (c.getName().equals(msgParts[i])) {
+                                    for (Contact contact : clientsList) {
+                                        if (contact.getName().equals(senderName)) {
+                                            contact.getEncryptedMessages().add(encryptedMessage);
                                             userExists = true;
                                         }
                                     }
                                     if (!userExists) {
-                                        clientsList.add(new Contact(msgParts[i]));
+                                        Contact newClient = new Contact(senderName);
+                                        newClient.getEncryptedMessages().add(encryptedMessage);
+                                        clientsList.add(newClient);
                                     }
-                                }
-                                for (TcpManagerObserver o : observers) {
-                                    o.clientsDownloaded();
-                                }
-                                break;
-                            case "REG_OK":
-                                for (TcpManagerObserver observer : observers) {
-                                    observer.registerOk();
-                                }
-                                break;
-                            case "REG_NOOK":
-                                for (TcpManagerObserver observer : observers) {
-                                    observer.registerNook();
-                                }
-                                break;
-                            case "LOGIN_NOOK":
-                                for (TcpManagerObserver observer : observers) {
-                                    observer.loginNook();
-                                }
-                                break;
-                            case "LOGIN_OK":
-                                for (TcpManagerObserver observer : observers) {
-                                    token = msgParts[1];
-                                    observer.loginOk();
-                                }
-                                break;
-                            case "BAD_TOKEN":
-                                for (TcpManagerObserver observer : observers) {
-                                    observer.badToken();
-                                }
-                                break;
-                            case "SEND_OK":
-                                for (TcpManagerObserver observer : observers) {
-                                    observer.sendOk();
-                                }
-                                break;
-                            case "MSG":
-                                String senderName = msgParts[1];
-                                String encryptedMessage = msgParts[2];
-                                for (Contact contact : clientsList) {
-                                    if (contact.getName().equals(senderName)) {
-                                        contact.getEncryptedMessages().add(encryptedMessage);
+                                    for (TcpManagerObserver observer : observers) {
+                                        observer.msgReceived(senderName, encryptedMessage);
                                     }
-                                }
-                                break;
-                            default:
-                                System.out.println("Unknown message: " + line);
+                                    break;
+                                default:
+                                    System.out.println("Unknown message: " + line);
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

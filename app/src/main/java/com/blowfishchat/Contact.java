@@ -1,6 +1,7 @@
 package com.blowfishchat;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Contact implements Serializable {
@@ -10,6 +11,7 @@ public class Contact implements Serializable {
 
     public Contact(String name) {
         this.name = name;
+        encryptedMessages = new ArrayList<>();
     }
 
     public String getKey() {
@@ -27,7 +29,6 @@ public class Contact implements Serializable {
     public void setEncryptedMessages(List<String> encryptedMessages) {
         this.encryptedMessages = encryptedMessages;
     }
-
 
     public String getName() {
         return name;

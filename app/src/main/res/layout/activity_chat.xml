@@ -5,6 +5,19 @@
     android:background="@color/background_czat"
     android:orientation="vertical">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Key:"
+        android:id="@+id/textView3"
+        android:layout_gravity="center_horizontal" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/keyField"
+        android:layout_gravity="center_horizontal" />
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="@dimen/czat_nowa_wiadomosc"
