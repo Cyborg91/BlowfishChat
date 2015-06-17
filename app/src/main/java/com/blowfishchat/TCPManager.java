@@ -19,15 +19,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TCPManager {
 
-    public final static String SERVER_IP = "46.101.158.227";//TODO
+    public final static String SERVER_IP = "10.0.2.2";//"46.101.158.227";
     public final static Integer SERVER_PORT = 8000;
 
-    public final static String LOGGER_IP = "46.101.158.227";//TODO
+    public final static String LOGGER_IP = "46.101.158.227";
     public final static Integer LOGGER_PORT = 9000;
 
     private BufferedReader in;
     private BufferedReader loggerIn;
     private PrintWriter out;
+    private PrintWriter logOut;
     private volatile ConcurrentLinkedQueue<String> outgoingMessages;
     private volatile ConcurrentLinkedQueue<String> outgoingLoggerMessages;
 
@@ -121,7 +122,7 @@ public class TCPManager {
         encrypter.init(true, key.getBytes());
         byte[] msgBytes = message.getBytes();
 
-        int newMsgBytesArraySize = message.getBytes().length + message.getBytes().length%8 == 0 ? 0 : 8 - message.getBytes().length%8;
+        int newMsgBytesArraySize = message.getBytes().length + (message.getBytes().length%8 == 0 ? 0 : (8 - message.getBytes().length%8));
 
         byte[] newMsgBytesArray = new byte[newMsgBytesArraySize];
 
@@ -133,7 +134,7 @@ public class TCPManager {
             newMsgBytesArray[j] = 0x00;
         }
 
-        int offset = message.getBytes().length%8 == 0 ? 0 : 8 - message.getBytes().length%8;
+        int offset = message.getBytes().length%8 == 0 ? 0 : (8 - message.getBytes().length%8);
         byte[] encryptedBytes = new byte[message.getBytes().length + offset];
         encrypter.transformBlock(newMsgBytesArray, 0, encryptedBytes, 0);
         String encryptedBase64 = Base64.encodeToString(encryptedBytes, Base64.DEFAULT);
@@ -175,6 +176,7 @@ public class TCPManager {
             
             loggerSocket = new Socket(LOGGER_IP, LOGGER_PORT);
             loggerIn = new BufferedReader(new InputStreamReader(loggerSocket.getInputStream()));
+            logOut = new PrintWriter(loggerSocket.getOutputStream(), true);
             loggerWriter = new Writer(true);
             loggerWriterThread = new Thread(loggerWriter);
             loggerWriterThread.start();
@@ -317,7 +319,11 @@ public class TCPManager {
                     String line = null;
                     line = isLogger ? outgoingLoggerMessages.poll() : outgoingMessages.poll();
                     if (line != null) {
-                        out.println(line);
+                        if (isLogger) {
+                            logOut.print(line);
+                        } else {
+                            out.println(line);
+                        }
                         System.out.println("Outgoing TCP message: " + line);
                     }
                     Thread.sleep(200);

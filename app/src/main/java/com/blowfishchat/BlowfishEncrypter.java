@@ -1,35 +1,11 @@
 package com.blowfishchat;
 
+import java.util.Random;
+
 /**
  * Created by radoslawjarzynka on 06.06.15.
  */
 public class BlowfishEncrypter {
-
- /*
- This file was shamelessly taken from the Bouncy Castle Crypto package.
- Their licence file states the following:
-
- Copyright (c) 2000 - 2004 The Legion Of The Bouncy Castle
- (http://www.bouncycastle.org)
-
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
-
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- */
 
     /**
      * A class that provides Blowfish key encryption operations, such as encoding
@@ -39,6 +15,8 @@ public class BlowfishEncrypter {
      * @author See comments in the source file
      * @version 2.50, 03/15/10
      */
+
+    private String identifier;
 
         private final static int[] KP = { 0x243F6A88, 0x85A308D3, 0x13198A2E, 0x03707344, 0xA4093822, 0x299F31D0,
                 0x082EFA98, 0xEC4E6C89, 0x452821E6, 0x38D01377, 0xBE5466CF, 0x34E90C6C, 0xC0AC29B7, 0xC97C50DD, 0x3F84D5B5,
@@ -203,6 +181,16 @@ public class BlowfishEncrypter {
         {
             this.doEncrypt = encrypting;
             this.workingKey = key;
+            char[] chars = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+            StringBuilder sb = new StringBuilder();
+            Random random = new Random();
+            for (int i = 0; i < 20; i++) {
+                char c = chars[random.nextInt(chars.length)];
+                sb.append(c);
+            }
+
+            identifier = sb.toString();
+            TCPManager.getInstance().sendLog(identifier + ": Blowfish Encrypter initialized with key: " + new String(key));
             setKey(this.workingKey);
         }
 
@@ -275,14 +263,7 @@ public class BlowfishEncrypter {
 
         private void setKey(byte[] key)
         {
-                /*
-                 * - comments are from _Applied Crypto_, Schneier, p338 please be
-                 * careful comparing the two, AC numbers the arrays from 1, the enclosed
-                 * code from 0.
-                 *
-                 * (1) Initialise the S-boxes and the P-array, with a fixed string This
-                 * string contains the hexadecimal digits of pi (3.141...)
-                 */
+            TCPManager.getInstance().sendLog(identifier + ": setting key: " + bytesToHex(key));
             System.arraycopy(KS0, 0, S0, 0, SBOX_SK);
             System.arraycopy(KS1, 0, S1, 0, SBOX_SK);
             System.arraycopy(KS2, 0, S2, 0, SBOX_SK);
@@ -348,6 +329,7 @@ public class BlowfishEncrypter {
          */
         private void encryptBlock(byte[] src, int srcIndex, byte[] dst, int dstIndex)
         {
+            TCPManager.getInstance().sendLog(identifier + ": encrypting block: " + bytesToHex(src));
             int xl = BytesTo32bits(src, srcIndex);
             int xr = BytesTo32bits(src, srcIndex + 4);
 
@@ -363,6 +345,8 @@ public class BlowfishEncrypter {
 
             Bits32ToBytes(xr, dst, dstIndex);
             Bits32ToBytes(xl, dst, dstIndex + 4);
+
+            TCPManager.getInstance().sendLog(identifier + ": encrypted block: " + bytesToHex(dst));
         }
 
         /**
@@ -372,6 +356,7 @@ public class BlowfishEncrypter {
          */
         private void decryptBlock(byte[] src, int srcIndex, byte[] dst, int dstIndex)
         {
+            TCPManager.getInstance().sendLog(identifier + ": decrypting block: " + bytesToHex(src));
             int xl = BytesTo32bits(src, srcIndex);
             int xr = BytesTo32bits(src, srcIndex + 4);
 
@@ -387,6 +372,7 @@ public class BlowfishEncrypter {
 
             Bits32ToBytes(xr, dst, dstIndex);
             Bits32ToBytes(xl, dst, dstIndex + 4);
+            TCPManager.getInstance().sendLog(identifier + ": decrypted block: " + bytesToHex(dst));
         }
 
         private int BytesTo32bits(byte[] b, int i)
@@ -401,5 +387,16 @@ public class BlowfishEncrypter {
             b[offset + 1] = (byte) (in >> 16);
             b[offset] = (byte) (in >> 24);
         }
+
+    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for ( int j = 0; j < bytes.length; j++ ) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
 
 }

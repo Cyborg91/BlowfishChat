@@ -58,6 +58,9 @@ public class ChatActivity extends ActionBarActivity implements TcpManagerObserve
                 ChatNewMessageText.setText("");
             }
         });
+        for (String message : messages) {
+            showMessage(message, false);
+        }
     }
 
     public void showMessage(List<String> messages) {
@@ -115,14 +118,21 @@ public class ChatActivity extends ActionBarActivity implements TcpManagerObserve
                         }
                     });
                 } else {
-                    String encryptedMessage = text.getText().toString();
+                    final String encryptedMessage = text.getText().toString();
                     byte[] decodedBase64EncryptedMessage = Base64.decode(encryptedMessage, Base64.DEFAULT);
                     BlowfishEncrypter decrypter = new BlowfishEncrypter();
                     decrypter.init(false, key.getBytes());
                     int offset = encryptedMessage.getBytes().length % 8 == 0 ? 0 : 8 - encryptedMessage.getBytes().length % 8;
                     byte[] decryptedBytes = new byte[encryptedMessage.getBytes().length + offset];
-                    decrypter.transformBlock(decodedBase64EncryptedMessage, 0, decryptedBytes, 0);
-
+                    try {
+                        decrypter.transformBlock(decodedBase64EncryptedMessage, 0, decryptedBytes, 0);
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        ChatActivity.this.runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "Could not decrypt "+ encryptedMessage +"!", Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
                     String message = new String(decryptedBytes);
                     text.setText(message);
                 }

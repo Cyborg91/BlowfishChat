@@ -23,6 +23,7 @@ import java.util.List;
 public class ContactActivity extends Activity implements TcpManagerObserver {
     private ListView contactListView;
     private Button getContactsButton;
+    private Button logoutButton;
 
     public List<Contact> getContacts() {
         return TCPManager.getInstance().getClientsList();
@@ -78,6 +79,15 @@ public class ContactActivity extends Activity implements TcpManagerObserver {
             }
         });
 
+        logoutButton = (Button) findViewById(R.id.logoutButton);
+        logoutButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TCPManager.getInstance().logout();
+                Intent intent = new Intent(ContactActivity.this, LoginActivity.class);
+                startActivity(intent);
+            }
+        });
         contactListView = (ListView) findViewById(R.id.contactListView);
         setupContacts();
     }
