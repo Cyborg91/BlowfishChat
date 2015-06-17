@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class TCPManager {
 
-    public final static String SERVER_IP = "10.0.2.2";//"46.101.158.227";
+    public final static String SERVER_IP = "46.101.158.227";
     public final static Integer SERVER_PORT = 8000;
 
     public final static String LOGGER_IP = "46.101.158.227";
@@ -37,7 +37,7 @@ public class TCPManager {
     private Thread loggerWriterThread;
     private Reader reader;
     private Writer writer;
-    private Writer loggerWriter;
+    private LoggerWriter loggerWriter;
 
     private String token;
     private String login;
@@ -120,24 +120,38 @@ public class TCPManager {
     public void sendMessage(String receiver, String key ,String message) {
         BlowfishEncrypter encrypter = new BlowfishEncrypter();
         encrypter.init(true, key.getBytes());
-        byte[] msgBytes = message.getBytes();
+        String[] incomingStrings = splitStringEvery(message, 8);
+        ArrayList<Byte> outputBytes = new ArrayList<>();
 
-        int newMsgBytesArraySize = message.getBytes().length + (message.getBytes().length%8 == 0 ? 0 : (8 - message.getBytes().length%8));
+        for (int i = 0; i < incomingStrings.length ; i++) {
+            byte[] msgBytes = incomingStrings[i].getBytes();
 
-        byte[] newMsgBytesArray = new byte[newMsgBytesArraySize];
+            int newMsgBytesArraySize = incomingStrings[i].getBytes().length + (incomingStrings[i].getBytes().length % 8 == 0 ? 0 : (8 - incomingStrings[i].getBytes().length % 8));
 
-        for (int i = 0; i < msgBytes.length; i++) {
-            newMsgBytesArray[i] = msgBytes[i];
+            byte[] newMsgBytesArray = new byte[newMsgBytesArraySize];
+
+            for (int s = 0; s< msgBytes.length; s++) {
+                newMsgBytesArray[s] = msgBytes[s];
+            }
+
+            for (int j = msgBytes.length; j < newMsgBytesArray.length; j++) {
+                newMsgBytesArray[j] = 0x00;
+            }
+
+            int offset = incomingStrings[i].getBytes().length % 8 == 0 ? 0 : (8 - incomingStrings[i].getBytes().length % 8);
+            byte[] encryptedBytes = new byte[incomingStrings[i].getBytes().length + offset];
+            encrypter.transformBlock(newMsgBytesArray, 0, encryptedBytes, 0);
+            for (int t = 0; t < encryptedBytes.length; t++) {
+                outputBytes.add(encryptedBytes[t]);
+            }
         }
 
-        for (int j = msgBytes.length; j < newMsgBytesArray.length; j ++) {
-            newMsgBytesArray[j] = 0x00;
+        byte[] allEncryptedBytes = new byte[outputBytes.size()];
+        for (int k = 0; k < outputBytes.size(); k++) {
+            allEncryptedBytes[k] = outputBytes.get(k);
         }
 
-        int offset = message.getBytes().length%8 == 0 ? 0 : (8 - message.getBytes().length%8);
-        byte[] encryptedBytes = new byte[message.getBytes().length + offset];
-        encrypter.transformBlock(newMsgBytesArray, 0, encryptedBytes, 0);
-        String encryptedBase64 = Base64.encodeToString(encryptedBytes, Base64.DEFAULT);
+        String encryptedBase64 = Base64.encodeToString(allEncryptedBytes, Base64.DEFAULT);
         sendToServer("SEND;" + login + ";" + token + ";" + receiver + ";" + encryptedBase64);
     }
 
@@ -151,6 +165,20 @@ public class TCPManager {
         outgoingLoggerMessages.add(message);
     }
 
+    public String[] splitStringEvery(String s, int interval) {
+        int arrayLength = (int) Math.ceil(((s.length() / (double)interval)));
+        String[] result = new String[arrayLength];
+
+        int j = 0;
+        int lastIndex = result.length - 1;
+        for (int i = 0; i < lastIndex; i++) {
+            result[i] = s.substring(j, j + interval);
+            j += interval;
+        } //Add the last bit
+        result[lastIndex] = s.substring(j);
+
+        return result;
+    }
     /**
      * wysłanie wiadomości do przekaźnika
      * @param str
@@ -177,7 +205,7 @@ public class TCPManager {
             loggerSocket = new Socket(LOGGER_IP, LOGGER_PORT);
             loggerIn = new BufferedReader(new InputStreamReader(loggerSocket.getInputStream()));
             logOut = new PrintWriter(loggerSocket.getOutputStream(), true);
-            loggerWriter = new Writer(true);
+            loggerWriter = new LoggerWriter();
             loggerWriterThread = new Thread(loggerWriter);
             loggerWriterThread.start();
         } catch (IOException e) {
@@ -311,19 +339,14 @@ public class TCPManager {
      */
     private class Writer implements Runnable {
         private boolean doWork;
-        private boolean isLogger = false;
         @Override
         public void run() {
             try {
                 while (doWork) {
                     String line = null;
-                    line = isLogger ? outgoingLoggerMessages.poll() : outgoingMessages.poll();
+                    line =  outgoingMessages.poll();
                     if (line != null) {
-                        if (isLogger) {
-                            logOut.print(line);
-                        } else {
-                            out.println(line);
-                        }
+                        out.println(line);
                         System.out.println("Outgoing TCP message: " + line);
                     }
                     Thread.sleep(200);
@@ -337,11 +360,36 @@ public class TCPManager {
             doWork = true;
         }
 
-        public Writer(boolean isLogger) {
-            doWork = true;
-            this.isLogger = isLogger;
+        public void setWork(boolean doWork) {
+            this.doWork = doWork;
+        }
+    }
+    /**
+     * Klasa wysyłająca komunikaty na serwer logujący
+     */
+    private class LoggerWriter implements Runnable {
+        private boolean doWork;
+        private boolean isLogger = false;
+        @Override
+        public void run() {
+            try {
+                while (doWork) {
+                    String line = null;
+                    line = outgoingLoggerMessages.poll();
+                    if (line != null) {
+                        logOut.println(line);
+                        System.out.println("Outgoing TCP message: " + line);
+                    }
+                    Thread.sleep(200);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
+        public LoggerWriter() {
+            doWork = true;
+        }
         public void setWork(boolean doWork) {
             this.doWork = doWork;
         }

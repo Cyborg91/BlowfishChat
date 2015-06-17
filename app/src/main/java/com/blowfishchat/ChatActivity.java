@@ -119,22 +119,33 @@ public class ChatActivity extends ActionBarActivity implements TcpManagerObserve
                     });
                 } else {
                     final String encryptedMessage = text.getText().toString();
-                    byte[] decodedBase64EncryptedMessage = Base64.decode(encryptedMessage, Base64.DEFAULT);
-                    BlowfishEncrypter decrypter = new BlowfishEncrypter();
-                    decrypter.init(false, key.getBytes());
-                    int offset = encryptedMessage.getBytes().length % 8 == 0 ? 0 : 8 - encryptedMessage.getBytes().length % 8;
-                    byte[] decryptedBytes = new byte[encryptedMessage.getBytes().length + offset];
                     try {
-                        decrypter.transformBlock(decodedBase64EncryptedMessage, 0, decryptedBytes, 0);
-                    } catch (ArrayIndexOutOfBoundsException e) {
+                        byte[] decodedBase64EncryptedMessage = Base64.decode(encryptedMessage, Base64.DEFAULT);
+                        BlowfishEncrypter decrypter = new BlowfishEncrypter();
+                        decrypter.init(false, key.getBytes());
+
+                        int offset = encryptedMessage.getBytes().length % 8 == 0 ? 0 : 8 - encryptedMessage.getBytes().length % 8;
+                        byte[] decryptedBytes = new byte[encryptedMessage.getBytes().length + offset];
+                        try {
+                            for (int i = 0; i < decodedBase64EncryptedMessage.length/8; i++) {
+                                decrypter.transformBlock(decodedBase64EncryptedMessage, 8*i, decryptedBytes, 8*i);
+                            }
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            ChatActivity.this.runOnUiThread(new Runnable() {
+                                public void run() {
+                                    Toast.makeText(getApplicationContext(), "Could not decrypt " + encryptedMessage + "!", Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        }
+                        String message = new String(decryptedBytes);
+                        text.setText(message);
+                    } catch (IllegalArgumentException e) {
                         ChatActivity.this.runOnUiThread(new Runnable() {
                             public void run() {
-                                Toast.makeText(getApplicationContext(), "Could not decrypt "+ encryptedMessage +"!", Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "Could not decode with base64 :" + encryptedMessage + "!", Toast.LENGTH_LONG).show();
                             }
                         });
                     }
-                    String message = new String(decryptedBytes);
-                    text.setText(message);
                 }
             }
         });
@@ -208,7 +219,7 @@ public class ChatActivity extends ActionBarActivity implements TcpManagerObserve
                 if (fromUser.equals(contact.getName())) {
                     showMessage(message, false);
                 }
-                Toast.makeText(getApplicationContext(), "Receiver message from" + fromUser + "!", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Receiver message from " + fromUser + "!", Toast.LENGTH_LONG).show();
             }
         });
     }

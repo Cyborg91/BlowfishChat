@@ -122,7 +122,7 @@ public class ContactActivity extends Activity implements TcpManagerObserver {
     public void msgReceived(final String fromUser, final String message) {
         ContactActivity.this.runOnUiThread(new Runnable() {
             public void run() {
-                Toast.makeText(getApplicationContext(), "Receiver message from" + fromUser + "!", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "Receiver message from " + fromUser + "!", Toast.LENGTH_LONG).show();
             }
         });
     }
